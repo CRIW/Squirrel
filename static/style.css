@@ -1,0 +1,10 @@
+nav{
+    position: fixed;
+    top: 0;
+}
+
+nav > input{
+    margin-top: 1vh;
+    border-color: #efefef;
+    max-width: 30vw;
+}
