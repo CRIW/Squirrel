@@ -13,7 +13,7 @@ export class Scanner{
     }
 
     public scan(){
-
+        
     }
 
     public rescan(){

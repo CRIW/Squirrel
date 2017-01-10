@@ -1,5 +1,6 @@
 import express = require("express");
 import {Scanner} from "./Scanner";
+import {Database} from "./Database";
 
 class Squirrel{
     private app: express.Application;
@@ -19,8 +20,10 @@ class Squirrel{
     }
 
     public test(){
-        var s:Scanner = new Scanner(null);
-        console.log(JSON.stringify(s.scanDirectory("/home/apexys/Music/Rena/Music")));
+        var db:Database = new Database("squirrel.db");
+        var s:Scanner = new Scanner(db);
+        s.scanDirectory("/home/apexys/Music/Rena/Music");
+        db.close();
     }
 }
 

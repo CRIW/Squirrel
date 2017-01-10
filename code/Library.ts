@@ -8,7 +8,7 @@ export class Library{
     scanner: Scanner;
     constructor(baseDir: string, dbFile: string){
         this.database = new Database(dbFile);
-        this.scanner = new Scanner(baseDir, database);
+        //this.scanner = new Scanner(baseDir, database);
     }
 
 

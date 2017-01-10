@@ -10,6 +10,11 @@ export class Database{
         });
     }
 
+    public close(){
+        this.db.close();
+        this.db = null;
+    }
+
     public getAlbumsForArtist(artist: string):Promise<string[]>{
         return new Promise((resolve, reject)=>{
             var stmt = this.db.prepare("SELECT DISTINCT t.album FROM tracks as t JOIN artists as a on t.songid == a.songid where a.name == ?",artist);
