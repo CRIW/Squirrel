@@ -21,9 +21,9 @@ class Squirrel{
 
     public test(){
         var db:Database = new Database("squirrel.db");
-        var s:Scanner = new Scanner(db);
-        s.scanDirectory("/home/apexys/Music/Rena/Music");
-        db.close();
+        var s:Scanner = new Scanner(db, "/home/apexys/Music/Rena/Music");
+        s.scan();
+        //db.close();
     }
 }
 

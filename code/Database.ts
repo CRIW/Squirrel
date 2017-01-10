@@ -5,8 +5,8 @@ export class Database{
     constructor(dbpath: string){
         this.db = new sqlite3.Database(dbpath);
         this.db.serialize(() => {
-            this.db.run("CREATE TABLE artists (name TEXT, songid INTEGER)");
-            this.db.run("CREATE TABLE tracks (songid INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, album TEXT, title TEXT)");
+            this.db.run("CREATE TABLE IF NOT EXISTS artists (name TEXT, songid INTEGER)");
+            this.db.run("CREATE TABLE IF NOT EXISTS tracks (songid INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, album TEXT, title TEXT)");
         });
     }
 
@@ -82,6 +82,10 @@ export class Database{
                 }
             });
         });
+    }
+
+    public addSongSync(amd: AudioMetaData){
+
     }
 
     public addSong(amd: AudioMetaData):Promise<void>{

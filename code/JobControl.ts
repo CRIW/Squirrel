@@ -25,7 +25,7 @@ export class JobControl{
         job.id = this.jobId;
         this.jobId++;
         this.jobs.set(job.id,job);
-        Global.Logger.Log("JobControl.addJob", "Added job " + job.id);
+        Global.Logger.Log("JobControl.addJob", "Added job " + job.id + ": " + job.Description);
         return job.id;
     }
 
@@ -33,6 +33,10 @@ export class JobControl{
          if(this.jobs.has(id)){
             var j = this.jobs.get(id);
             this.jobs.delete(j.id);
+             Global.Logger.Log("JobControl.addJob", "Finished job " + j.id + ": " + j.Description);
+            if(this.jobs.size == 0){
+                Global.Logger.Log("JobControl.finishJob", "All jobs finished");
+            }
         }else{
             Global.Logger.Log("JobControl.finishJob", "Job " + id + " does not exist");
         }
