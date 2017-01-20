@@ -15,6 +15,12 @@ export class Database{
         this.db = null;
     }
 
+    public search(term: string):Promise<string[]>{
+        return new Promise((resolve, reject)=>{
+            var stmt = this 
+        });
+    }
+
     public getAlbumsForArtist(artist: string):Promise<string[]>{
         return new Promise((resolve, reject)=>{
             var stmt = this.db.prepare("SELECT DISTINCT t.album FROM tracks as t JOIN artists as a on t.songid == a.songid where a.name == ?",artist);
@@ -73,7 +79,7 @@ export class Database{
 
     public getSongIdForPath(filename: string):Promise<number>{
         return new Promise((resolve, reject)=>{
-            var stmt = this.db.prepare("SELECT songid FROM tracks WHERE path = ?",filename);
+            var stmt = this.db.prepare("SELECT songid FROM tracks WHERE path = '?'",filename);
             stmt.get((err,row)=>{
                 if(err){
                     reject(err);

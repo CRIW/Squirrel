@@ -7,6 +7,7 @@ import child_process = require('child_process');
 export class Scanner{
     db: Database;
     baseDir: string;
+    scanlist: string[] = [];
 
     constructor(db: Database, baseDir: string){
         this.db = db;
@@ -40,6 +41,19 @@ export class Scanner{
             }
         });
         Promise.all(jobs).then(() => Global.JobControl.finishJob(jobid));
+    }
+
+    handleScan():Promise<void>{
+        return new Promise<void>((resolve, reject) => {
+            if(this.scanlist.length > 0){
+                var toScan = this.scanlist.pop();
+                var stat = fs.statSync(toScan);
+                if(stat.isDirectory()){
+                    this.scanDirectory(toScan);
+                }
+            }
+        });
+        
     }
 
     public scanFile(filename: string):Promise<void>{
