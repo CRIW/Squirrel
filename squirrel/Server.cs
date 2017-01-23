@@ -18,11 +18,18 @@ namespace squirrel
 			Get ["/details/{id}"] = parameters => Global.db.getAudioMetaDataForSongid (parameters.id);
 			Get ["/file/{id}"] = parameters => new StreamResponse( () => Global.db.getFileContents (parameters.id),"audio/mpeg");
 			Get ["/rescan/status"] = _ => Global.getScanStatus ();
-			Get ["/rescan/active"] = _ => Global.rescanActive.ToString();
+			Get ["/rescan/active"] = _ => Global.rescanActive;
 			Get ["/rescan/start"] = _ => {
 				Global.runRescan ();
 				return "Rescan started";
 			};
+			After += (Context) =>
+			{
+				Context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+				Context.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
+				Context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, x-requested-with, Authorization, Accept, Origin");
+			};
+
 		}
 
 	}

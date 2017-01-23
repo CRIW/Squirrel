@@ -93,6 +93,7 @@ namespace squirrel
 			SqliteDataReader rdr = cmd.ExecuteReader ();
 			if (rdr.Read ()) {
 				var amd = new AudioMetaData ();
+				amd.songid = songid;
 				amd.path = rdr.GetString (0);
 				if (!rdr.IsDBNull (1)) {
 					amd.album = rdr.GetString (1);
