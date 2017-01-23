@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Nancy.Hosting.Self;
 
 namespace squirrel
@@ -7,23 +8,23 @@ namespace squirrel
 	{
 		public static void Main (string[] args)
 		{
-			Console.WriteLine ("Hello World!");
+			var dirpath = "";
+			if (!File.Exists ("config")) {
+				Console.WriteLine ("No config file with basedir exists!");
+				Environment.Exit (0);
+			} else {
+				dirpath = File.ReadAllText ("config").Trim();
+			}
+
+			Console.WriteLine ("Starting squirrel service for " + dirpath);
 
 			var db = new Database ("data.base");
 			Global.db = db;
-			var scanner = new Scanner (db, "/home/apexys/Music/Rena");
-			System.Diagnostics.Stopwatch st = new System.Diagnostics.Stopwatch ();
-			st.Start ();
-			scanner.rescan();
-			st.Stop ();
-			Console.WriteLine (st.ElapsedMilliseconds);
+			Global.scanner = new Scanner (db, dirpath);
+			Global.runRescan ();
 
-			db.getAudioMetaDataForSongid (1);
 
-			var paths = Global.db.getAllPaths ().ToArray ();
-			var json = Global.StringArrayToJSON (paths);
-
-			Nancy.StaticConfiguration.DisableErrorTraces = false;
+			//Nancy.StaticConfiguration.DisableErrorTraces = false;
 
 			using (var host = new NancyHost(new Uri("http://localhost:1234")))
 			{

@@ -16,23 +16,28 @@ namespace squirrel
 		}
 
 		public void rescan(){
+			Global.putScanStatus ("Validating existing paths");
 			foreach (var path in db.getAllPaths()) {
 				if (!File.Exists (path)) {
 					db.deletePath (path);
-					Console.WriteLine ("Deleted path " + path);
+					Global.putScanStatus ("Deleted invalid path " + path);
 				}
 			}
+			Global.putScanStatus ("Looking for new files");
 			scanDirectory (directory);
+			Global.putScanStatus ("Finished descent");
 		}
 
 		void scanDirectory(string filename){
+			Global.putScanStatus ("Descending into " + filename);
+
 			//DFS FTW
 			foreach (var dir in Directory.GetDirectories(filename)) {
 				scanDirectory (dir);
 			}
 
 			foreach (var file in Directory.GetFiles(filename)) {
-				if (file.EndsWith (".mp3") && !db.hasPath(filename)) {
+				if (file.EndsWith (".mp3")) {
 					scanFile (file);
 				}
 			}
@@ -42,7 +47,7 @@ namespace squirrel
 		void scanFile(string filename){
 			if (!this.db.hasPath (filename)) {
 				var psi = new ProcessStartInfo ("ffmpeg", "-i " + Global.escapeArgument (filename) + " -f ffmetadata -");
-				Console.WriteLine ("Scanning " + filename);
+				Global.putScanStatus("Scanning " + filename);
 				psi.RedirectStandardOutput = true;
 				psi.RedirectStandardError = true;
 				psi.UseShellExecute = false;
