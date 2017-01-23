@@ -24,6 +24,9 @@ namespace squirrel
 			if(this.album_artist == null && this.artists.Count > 0){
 				this.album_artist = this.artists[0];
 			}
+			if (this.title == null || this.title == "") {
+				this.title = new System.IO.FileInfo (this.path).Name;
+			}
 		}
 	}
 }

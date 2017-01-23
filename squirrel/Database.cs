@@ -8,6 +8,8 @@ namespace squirrel
 {
 	public class Database
 	{
+		const bool HIDE_FILE_PATHS = false;
+		
 		SqliteConnection dbcon;
 
 		public Database (string filename)
@@ -29,6 +31,99 @@ namespace squirrel
 
 		~Database(){
 			dbcon.Close ();
+		}
+
+		public System.IO.FileStream getFileContents(int id){
+			var amd = getAudioMetaDataForSongid (id);
+			return System.IO.File.OpenRead (amd.path);
+		}
+
+		public List<int> searchIDs(string term){
+			var results = new List<int> ();
+			if (term != null && term != "") {
+				var cmd = dbcon.CreateCommand ();
+				cmd.CommandText = "SELECT t.songid FROM tracks AS t WHERE t.path LIKE @query OR t.album LIKE @query OR t.title LIKE @query OR t.albumartist LIKE @query OR EXISTS (SELECT a.name FROM artists as a WHERE a.name LIKE @query AND a.songid = t.songid)";
+				cmd.Parameters.AddWithValue ("@query", "%" + term + "%");
+				cmd.Prepare ();
+				SqliteDataReader rdr = cmd.ExecuteReader ();
+				while (rdr.Read ()) {
+					results.Add(rdr.GetInt32(0));
+				}
+			}
+			return results;
+		}
+
+		public List<int> searchIDsLimited (string term, int limit){
+			var results = new List<int> ();
+			if (term != null && term != "") {
+				var cmd = dbcon.CreateCommand ();
+				cmd.CommandText = "SELECT t.songid FROM tracks AS t WHERE t.path LIKE @query OR t.album LIKE @query OR t.title LIKE @query OR t.albumartist LIKE @query OR EXISTS (SELECT a.name FROM artists as a WHERE a.name LIKE @query AND a.songid = t.songid) LIMIT @limit";
+				cmd.Parameters.AddWithValue ("@query", "%" + term + "%");
+				cmd.Parameters.AddWithValue ("@limit", limit);
+				cmd.Prepare ();
+				SqliteDataReader rdr = cmd.ExecuteReader ();
+				while (rdr.Read ()) {
+					results.Add(rdr.GetInt32(0));
+				}
+			}
+			return results;
+		}
+
+		public List<AudioMetaData> searchFull(string term){
+			var results = new List<AudioMetaData> ();
+			foreach(var id in searchIDs(term)){
+				results.Add(getAudioMetaDataForSongid(id));
+			}
+			return results;
+		}
+
+		public List<AudioMetaData> searchFullLimited(string term, int limit){
+			var results = new List<AudioMetaData> ();
+			foreach(var id in searchIDsLimited(term, limit)){
+				results.Add(getAudioMetaDataForSongid(id));
+			}
+			return results;
+		}
+
+		public AudioMetaData getAudioMetaDataForSongid(int songid){
+			var cmd = dbcon.CreateCommand ();
+			cmd.CommandText = "SELECT path, album, title, track, genre, date, albumartist FROM tracks WHERE songid = @songid";
+			cmd.Parameters.AddWithValue ("@songid", songid);
+			cmd.Prepare ();
+			SqliteDataReader rdr = cmd.ExecuteReader ();
+			if (rdr.Read ()) {
+				var amd = new AudioMetaData ();
+				amd.path = rdr.GetString (0);
+				if (!rdr.IsDBNull (1)) {
+					amd.album = rdr.GetString (1);
+				}
+				if (!rdr.IsDBNull (2)) {
+					amd.title = rdr.GetString (2);
+				}
+				if (!rdr.IsDBNull (3)) {
+					amd.track = rdr.GetString (3);
+				}
+				if (!rdr.IsDBNull (4)) {
+					amd.genre = rdr.GetString (4);
+				}
+				if (!rdr.IsDBNull (5)) {
+					amd.album_artist = rdr.GetString (5);
+				}
+				cmd.Dispose ();
+				cmd = dbcon.CreateCommand ();
+				cmd.CommandText = "SELECT name FROM artists WHERE songid = @songid";
+				cmd.Parameters.AddWithValue ("@songid", songid);
+				cmd.Prepare ();
+				rdr = cmd.ExecuteReader ();
+				while (rdr.Read ()) {
+					amd.artists.Add (rdr.GetString (0));
+				}
+				cmd.Dispose ();
+				return amd;
+			} else {
+				cmd.Dispose ();
+				return null;
+			}
 		}
 
 		public List<string> getAllPaths(){

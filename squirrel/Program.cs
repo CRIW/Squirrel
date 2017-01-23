@@ -18,8 +18,12 @@ namespace squirrel
 			st.Stop ();
 			Console.WriteLine (st.ElapsedMilliseconds);
 
+			db.getAudioMetaDataForSongid (1);
+
 			var paths = Global.db.getAllPaths ().ToArray ();
 			var json = Global.StringArrayToJSON (paths);
+
+			Nancy.StaticConfiguration.DisableErrorTraces = false;
 
 			using (var host = new NancyHost(new Uri("http://localhost:1234")))
 			{
