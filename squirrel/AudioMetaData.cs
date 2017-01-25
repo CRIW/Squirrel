@@ -13,6 +13,7 @@ namespace squirrel
 		public string path;
 		public string genre;
 		public string date;
+		public double duration;
 		public int songid;
 
 		public AudioMetaData ()

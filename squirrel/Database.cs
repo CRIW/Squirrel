@@ -23,7 +23,7 @@ namespace squirrel
 			dbcmd.ExecuteNonQuery ();
 			//Console.WriteLine("Create table artist {0}", dbcmd.ExecuteNonQuery ().ToString());
 			dbcmd = dbcon.CreateCommand ();
-			dbcmd.CommandText = "CREATE TABLE IF NOT EXISTS tracks (songid INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, album TEXT, title TEXT, track TEXT, genre TEXT, date TEXT, albumartist TEXT)";
+			dbcmd.CommandText = "CREATE TABLE IF NOT EXISTS tracks (songid INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, album TEXT, title TEXT, track TEXT, genre TEXT, date TEXT, albumartist TEXT, duration REAL)";
 			dbcmd.ExecuteNonQuery ();
 			//Console.WriteLine("Create table artist {0}", dbcmd.ExecuteNonQuery ().ToString());
 			dbcmd.Dispose();
@@ -87,7 +87,7 @@ namespace squirrel
 
 		public AudioMetaData getAudioMetaDataForSongid(int songid){
 			var cmd = dbcon.CreateCommand ();
-			cmd.CommandText = "SELECT path, album, title, track, genre, date, albumartist FROM tracks WHERE songid = @songid";
+			cmd.CommandText = "SELECT path, album, title, track, genre, date, albumartist, duration FROM tracks WHERE songid = @songid";
 			cmd.Parameters.AddWithValue ("@songid", songid);
 			cmd.Prepare ();
 			SqliteDataReader rdr = cmd.ExecuteReader ();
@@ -108,7 +108,13 @@ namespace squirrel
 					amd.genre = rdr.GetString (4);
 				}
 				if (!rdr.IsDBNull (5)) {
-					amd.album_artist = rdr.GetString (5);
+					amd.date = rdr.GetString (5);
+				}
+				if (!rdr.IsDBNull (6)) {
+					amd.album_artist = rdr.GetString (6);
+				}
+				if (!rdr.IsDBNull (7)) {
+					amd.duration = rdr.GetDouble (7);
 				}
 				cmd.Dispose ();
 				cmd = dbcon.CreateCommand ();
@@ -183,7 +189,7 @@ namespace squirrel
 		public void addSong(AudioMetaData amd){
 			//Insert into track table
 			var cmd = dbcon.CreateCommand();
-			cmd.CommandText = "INSERT INTO tracks(path, album, title, track, genre, date, albumartist) values (@path,@album,@title,@track,@genre,@date,@albumartist)";
+			cmd.CommandText = "INSERT INTO tracks(path, album, title, track, genre, date, albumartist, duration) values (@path,@album,@title,@track,@genre,@date,@albumartist,@duration)";
 			cmd.Parameters.AddWithValue ("@path", amd.path);
 			cmd.Parameters.AddWithValue ("@album", amd.album);
 			cmd.Parameters.AddWithValue ("@title", amd.title);
@@ -191,6 +197,7 @@ namespace squirrel
 			cmd.Parameters.AddWithValue ("@genre", amd.genre);
 			cmd.Parameters.AddWithValue ("@date",amd.date);
 			cmd.Parameters.AddWithValue ("@albumartist", amd.album_artist);
+			cmd.Parameters.AddWithValue ("@duration", amd.duration);
 			cmd.Prepare ();
 			cmd.ExecuteNonQuery ();
 

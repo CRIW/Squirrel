@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 using System.IO;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ namespace squirrel
 	{
 		Database db;
 		string directory;
+
 		public Scanner (Database db, string directory)
 		{
 			this.db = db;
@@ -74,6 +76,27 @@ namespace squirrel
 						amd.date = line.Substring ("date=".Length);
 					} else if (line.StartsWith ("album")) {
 						amd.album = line.Substring ("album=".Length);
+					}
+				}
+
+				var e = p.StandardError.ReadToEnd ();
+				var r = new Regex("\\s+Duration\\: (\\S+)\\,");
+				Match m = r.Match (e);
+				if (m.Success) {
+					var d = m.Groups [0].ToString ().Trim();
+					if (d != null && d.Length > 0) {
+						try{
+						var parts = d.Split (':');
+						var hourpart = parts [1].Trim();
+						var hours = Double.Parse(hourpart);
+						var minutes = Double.Parse (parts[2].Trim());
+						var seconds = Double.Parse (parts[3].Trim(' ',','));
+						minutes = minutes + hours * 60;
+						seconds = seconds + minutes * 60;
+						amd.duration = seconds;
+						}catch{
+							Global.putScanStatus ("Error parsing duration in " + filename);
+						}
 					}
 				}
 
