@@ -25,6 +25,9 @@ namespace squirrel
 			dbcmd = dbcon.CreateCommand ();
 			dbcmd.CommandText = "CREATE TABLE IF NOT EXISTS tracks (songid INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, album TEXT, title TEXT, track TEXT, genre TEXT, date TEXT, albumartist TEXT, duration REAL)";
 			dbcmd.ExecuteNonQuery ();
+			dbcmd = dbcon.CreateCommand ();
+			dbcmd.CommandText = "CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts4(songid INTEGER PRIMARY KEY, searchtext TEXT)";
+			dbcmd.ExecuteNonQuery ();
 			//Console.WriteLine("Create table artist {0}", dbcmd.ExecuteNonQuery ().ToString());
 			dbcmd.Dispose();
 		}
@@ -53,6 +56,20 @@ namespace squirrel
 			return results;
 		}
 
+		public List<int> searchIDsFTS(string term){
+			var results = new List<int> ();
+			if (term != null && term != "") {
+				var cmd = dbcon.CreateCommand ();
+				cmd.CommandText = "SELECT songid from search WHERE searchtext MATCH @query";
+				cmd.Parameters.AddWithValue ("@query", term);	cmd.Prepare ();
+				SqliteDataReader rdr = cmd.ExecuteReader ();
+				while (rdr.Read ()) {
+					results.Add(rdr.GetInt32(0));
+				}
+			}
+			return results;
+		}
+
 		public List<int> searchIDsLimited (string term, int limit){
 			var results = new List<int> ();
 			if (term != null && term != "") {
@@ -69,9 +86,25 @@ namespace squirrel
 			return results;
 		}
 
+		public List<int> searchIDsLimitedFTS (string term, int limit){
+			var results = new List<int> ();
+			if (term != null && term != "") {
+				var cmd = dbcon.CreateCommand ();
+				cmd.CommandText = "SELECT songid from search WHERE searchtext MATCH @query LIMIT @limit";
+				cmd.Parameters.AddWithValue ("@query", term);
+				cmd.Parameters.AddWithValue ("@limit", limit);
+				cmd.Prepare ();
+				SqliteDataReader rdr = cmd.ExecuteReader ();
+				while (rdr.Read ()) {
+					results.Add(rdr.GetInt32(0));
+				}
+			}
+			return results;
+		}
+
 		public List<AudioMetaData> searchFull(string term){
 			var results = new List<AudioMetaData> ();
-			foreach(var id in searchIDs(term)){
+			foreach(var id in searchIDsFTS(term)){
 				results.Add(getAudioMetaDataForSongid(id));
 			}
 			return results;
@@ -79,7 +112,7 @@ namespace squirrel
 
 		public List<AudioMetaData> searchFullLimited(string term, int limit){
 			var results = new List<AudioMetaData> ();
-			foreach(var id in searchIDsLimited(term, limit)){
+			foreach(var id in searchIDsLimitedFTS(term, limit)){
 				results.Add(getAudioMetaDataForSongid(id));
 			}
 			return results;
@@ -144,6 +177,28 @@ namespace squirrel
 			return result;
 		}
 
+		public List<int> getAllIDs(){
+			var cmd = dbcon.CreateCommand ();
+			cmd.CommandText = "SELECT DISTINCT songid FROM tracks";
+			SqliteDataReader rdr = cmd.ExecuteReader();
+			List<int> result = new List<int>();
+			while (rdr.Read ()) {
+				result.Add (rdr.GetInt32 (0));
+			}
+			return result;
+		}
+
+		public List<int> getAllIDsNotInSearchIndex(){
+			var cmd = dbcon.CreateCommand ();
+			cmd.CommandText = "SELECT DISTINCT t.songid FROM tracks as t WHERE NOT EXISTS (SELECT s.songid FROM search AS s WHERE s.songid = t.songid)";
+			SqliteDataReader rdr = cmd.ExecuteReader();
+			List<int> result = new List<int>();
+			while (rdr.Read ()) {
+				result.Add (rdr.GetInt32 (0));
+			}
+			return result;
+		}
+
 		public List<string> getAllArtists(){
 			var cmd = dbcon.CreateCommand ();
 			cmd.CommandText = "SELECT DISTINCT name FROM artists";
@@ -186,6 +241,17 @@ namespace squirrel
 
 		}
 
+		public void insertSearchMetadata(int songid, AudioMetaData amd){
+			//Insert into search table
+			var cmd = dbcon.CreateCommand ();
+			cmd.CommandText = "INSERT INTO search(songid, searchtext) values (@songid,@searchtext)";
+			var searchtext = amd.title + " " + amd.album + " " + amd.album_artist + " " + String.Join (" ", amd.artists);
+			cmd.Parameters.AddWithValue ("@searchtext", searchtext);
+			cmd.Parameters.AddWithValue ("@songid", songid);
+			cmd.Prepare ();
+			cmd.ExecuteNonQuery();
+		}
+
 		public void addSong(AudioMetaData amd){
 			//Insert into track table
 			var cmd = dbcon.CreateCommand();
@@ -201,9 +267,14 @@ namespace squirrel
 			cmd.Prepare ();
 			cmd.ExecuteNonQuery ();
 
+
+
 			//Get SongId back
 			var songid = getSongIdForPath(amd.path);
-			if (songid != null) {
+			if (songid.HasValue) {
+				insertSearchMetadata ((int)songid, amd);
+
+				//Insert all artists
 				foreach (var artist in amd.artists) {
 					cmd = dbcon.CreateCommand ();
 					cmd.CommandText = "INSERT INTO artists(name, songid) values (@name,@id)";
@@ -226,12 +297,44 @@ namespace squirrel
 				cmd.Parameters.AddWithValue ("@songid", id);
 				cmd.Prepare ();
 				cmd.ExecuteNonQuery ();
+				cmd.CommandText = "DELETE FROM search WHERE songid = @songid";
+				cmd.Parameters.AddWithValue ("@songid", id);
+				cmd.Prepare ();
+				cmd.ExecuteNonQuery ();
 				cmd = dbcon.CreateCommand ();
 				cmd.CommandText = "DELETE FROM artists WHERE songid = @songid";
 				cmd.Parameters.AddWithValue ("@songid", id);
 				cmd.Prepare ();
 				cmd.ExecuteNonQuery ();
 			}
+		}
+
+		public void rebuildSearchIndex(){
+			var cmd = dbcon.CreateCommand ();
+			cmd.CommandText = "DELETE FROM search";
+			cmd.Prepare ();
+			var rowsDropped = cmd.ExecuteNonQuery ();
+			Console.WriteLine ("Deleted " + rowsDropped + " outdated lines from the search index");
+			var ids = getAllIDs ();
+			Console.WriteLine ("Inserting index lines for " + ids.Count.ToString () + " IDs");
+			foreach (var id in ids) {
+				insertSearchMetadata (id, getAudioMetaDataForSongid (id));
+			}
+			Console.WriteLine ("Done.");
+		}
+
+		public void refreshSearchIndex(){
+			var cmd = dbcon.CreateCommand ();
+			cmd.CommandText = "DELETE FROM search WHERE NOT EXISTS (SELECT t.songid FROM tracks AS t WHERE songid = t.songid)";
+			cmd.Prepare ();
+			var rowsDropped = cmd.ExecuteNonQuery ();
+			Console.WriteLine ("Deleted " + rowsDropped + " outdated lines from the search index");
+			var ids = getAllIDsNotInSearchIndex ();
+			Console.WriteLine ("Inserting index lines for " + ids.Count.ToString () + " new IDs");
+			foreach (var id in ids) {
+				insertSearchMetadata (id, getAudioMetaDataForSongid (id));
+			}
+			Console.WriteLine ("Done.");
 		}
 
 	}

@@ -20,6 +20,7 @@ namespace squirrel
 
 			var db = new Database ("data.base");
 			Global.db = db;
+			db.refreshSearchIndex ();
 			Global.scanner = new Scanner (db, dirpath);
 			Global.runRescan ();
 
