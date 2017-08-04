@@ -1,0 +1,7 @@
+[package]
+name = "Squirrel"
+version = "0.1.0"
+authors = ["Valentin Buck <apexys@toppoint.de>"]
+
+[dependencies]
+id3 = "*"
